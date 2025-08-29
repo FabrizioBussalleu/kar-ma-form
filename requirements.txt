@@ -1,0 +1,11 @@
+# Requerimientos para la app Kar & Ma
+
+# Conexión a Google Sheets
+gspread
+oauth2client
+google-auth
+google-auth-oauthlib
+google-auth-httplib2
+
+# Streamlit (base de la app)
+streamlit
