@@ -20,7 +20,7 @@ spreadsheet = client.open_by_key(SPREADSHEET_ID)
 # =========================
 st.set_page_config(page_title="Revisión de Contenidos Kar & Ma", layout="wide")
 st.title("📝 Revisión de Contenidos")
-st.write("Revisa cada bloque y escribe el reemplazo correspondiente. El texto original está a la izquierda y el campo de reemplazo está vacío por defecto.")
+st.write("Revise cada bloque y escriba el reemplazo correspondiente. El texto mock está a la izquierda y el campo de reemplazo está vacío por defecto.")
 
 # Toggle para abrir/cerrar todos los bloques
 expand_all = st.checkbox("Abrir todos los bloques", value=False)
@@ -128,6 +128,6 @@ if st.button("💾 Guardar en Google Sheets"):
         ws.append_row(["Sección", "Texto actual", "Texto revisado"])
         rows = [[k, textos[k], respuestas.get(k, "")] for k in textos.keys()]
         ws.append_rows(rows, value_input_option="RAW")
-        st.success(f"✅ Respuestas guardadas en la pestaña '{sheet_name}'.")
+        st.success(f"✅ Respuestas enviadas y guardadas en la pestaña '{sheet_name}'.")
     except Exception as e:
         st.error(f"❌ Error al guardar en Google Sheets: {e}")
