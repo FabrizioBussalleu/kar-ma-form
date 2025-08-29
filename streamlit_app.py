@@ -1,11 +1,31 @@
 import streamlit as st
-import pandas as pd
+import gspread
+from google.oauth2.service_account import Credentials
 
-st.set_page_config(page_title="Revisión de Contenidos Kar & Ma", layout="wide")
+# =========================
+# CONFIGURACIÓN GOOGLE SHEETS
+# =========================
+# Alcances para Sheets y Drive
+SCOPES = ["https://www.googleapis.com/auth/spreadsheets",
+          "https://www.googleapis.com/auth/drive"]
 
-st.title("📝 Revisión de Contenidos")
-st.write("Por favor, revisa cada bloque de texto actual y escribe el reemplazo correspondiente.")
+# Conectar usando las credenciales guardadas en Streamlit (Secrets)
+creds = Credentials.from_service_account_info(
+    st.secrets["gcp_service_account"],
+    scopes=SCOPES
+)
 
+client = gspread.authorize(creds)
+
+# ID del Spreadsheet que compartiste
+SPREADSHEET_ID = "1vO-WJqpKYzEXfkUPqFH3Vlgk5cveF9ThO4D0LRE-K_4"
+
+# Abrir el Spreadsheet
+spreadsheet = client.open_by_key(SPREADSHEET_ID)
+
+# =========================
+# TEXTOS BASE A REVISAR
+# =========================
 textos = {
     "Header - Menú": "Logo | Inicio | Nosotros | Submarcas | Segmentos | Clientes | Cotización",
 
@@ -68,18 +88,33 @@ Sectores atendidos:
     "Footer": "© 2025 Kar & Ma. Todos los derechos reservados. Tradición salinera del norte peruano.",
 }
 
-reemplazos = {}
+# =========================
+# APP STREAMLIT
+# =========================
+st.title("📝 Revisión de Contenidos")
+st.write("Por favor, revisa cada bloque de texto actual y escribe el reemplazo correspondiente.")
 
-st.subheader("Formulario")
-for clave, valor in textos.items():
-    with st.expander(clave, expanded=False):
-        st.write("**Texto actual:**")
-        st.info(valor)
-        reemplazos[clave] = st.text_area(f"Nuevo texto para '{clave}'", "")
+with st.form("revision_form"):
+    respuestas = {}
+    for clave, texto in textos.items():
+        st.subheader(clave)
+        st.text_area("Texto actual:", value=texto, disabled=True, key=f"orig_{clave}")
+        nuevo_texto = st.text_area("Texto revisado:", value=texto, key=f"new_{clave}")
+        respuestas[clave] = nuevo_texto
 
+    submit = st.form_submit_button("Guardar en Google Sheets")
 
-if st.button("💾 Guardar en Excel"):
-    df = pd.DataFrame(list(reemplazos.items()), columns=["Sección", "Reemplazo"])
-    df.to_excel("reemplazos.xlsx", index=False)
-    st.success("Archivo 'reemplazos.xlsx' generado correctamente.")
-    st.download_button("⬇️ Descargar Excel", df.to_csv(index=False).encode("utf-8"), "reemplazos.csv", "text/csv")
+if submit:
+    try:
+        # Crear nueva hoja con nombre único
+        nueva_hoja = spreadsheet.add_worksheet(title=f"Respuesta_{len(spreadsheet.worksheets())}", rows="100", cols="2")
+        # Insertar encabezados
+        nueva_hoja.append_row(["Sección", "Texto Revisado"])
+        # Insertar cada respuesta
+        for clave, valor in respuestas.items():
+            nueva_hoja.append_row([clave, valor])
+
+        st.success("✅ Respuestas guardadas en Google Sheets (nueva pestaña creada).")
+
+    except Exception as e:
+        st.error(f"❌ Error al guardar en Google Sheets: {e}")
