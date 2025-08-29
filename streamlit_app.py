@@ -97,10 +97,11 @@ with st.form("revision_form"):
             with col2:
                 st.markdown("**Texto revisado**")
                 respuestas[clave] = st.text_area(
-                    label=f"Nuevo texto para '{clave}'",
+                    label="",  # sin etiqueta
                     value="",  # vacío por defecto
                     height=140,
-                    key=f"resp_{i}"
+                    key=f"resp_{i}",
+                    label_visibility="collapsed"  # 🔑 oculta el "Ctrl+Enter"
                 )
     submitted = st.form_submit_button("💾 Guardar en Google Sheets")
 
