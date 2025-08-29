@@ -3,7 +3,7 @@ import pandas as pd
 
 st.set_page_config(page_title="Revisión de Contenidos Kar & Ma", layout="wide")
 
-st.title("📝 Revisión de Contenidos (Mock-up)")
+st.title("📝 Revisión de Contenidos")
 st.write("Por favor, revisa cada bloque de texto actual y escribe el reemplazo correspondiente.")
 
 textos = {
