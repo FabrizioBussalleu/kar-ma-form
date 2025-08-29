@@ -83,49 +83,45 @@ Sectores atendidos:
 }
 
 # =========================
-# FORMULARIO
+# FORMULARIO SIN st.form
 # =========================
 respuestas = {}
 
-with st.form("revision_form"):
-    for i, (clave, texto) in enumerate(textos.items()):
-        with st.expander(clave, expanded=expand_all):
-            col1, col2 = st.columns([1, 1])
-            with col1:
-                st.markdown("**Texto actual**")
-                st.info(texto)
-            with col2:
-                st.markdown("**Texto revisado**")
-                respuestas[clave] = st.text_area(
-                    label="",  # sin etiqueta
-                    value="",  # vacío por defecto
-                    height=140,
-                    key=f"resp_{i}",
-                    label_visibility="collapsed"  # 🔑 oculta el "Ctrl+Enter"
-                )
-    submitted = st.form_submit_button("💾 Guardar en Google Sheets")
+for i, (clave, texto) in enumerate(textos.items()):
+    with st.expander(clave, expanded=expand_all):
+        col1, col2 = st.columns([1, 1])
+        with col1:
+            st.markdown("**Texto actual**")
+            st.info(texto)
+        with col2:
+            st.markdown("**Texto revisado**")
+            respuestas[clave] = st.text_area(
+                label="",
+                value="",  # vacío por defecto
+                height=140,
+                key=f"resp_{i}",
+                label_visibility="collapsed"
+            )
 
-# =========================
-# GUARDADO: una respuesta = una pestaña
-# =========================
-def next_response_sheet_name(ss) -> str:
-    titles = [ws.title for ws in ss.worksheets()]
-    nums = []
-    for t in titles:
-        m = re.fullmatch(r"Respuesta (\d+)", t.strip())
-        if m:
-            try:
-                nums.append(int(m.group(1)))
-            except ValueError:
-                pass
-    n = (max(nums) + 1) if nums else 1
-    title = f"Respuesta {n}"
-    while title in titles:
-        n += 1
+# Botón único de guardado
+if st.button("💾 Guardar en Google Sheets"):
+    def next_response_sheet_name(ss) -> str:
+        titles = [ws.title for ws in ss.worksheets()]
+        nums = []
+        for t in titles:
+            m = re.fullmatch(r"Respuesta (\d+)", t.strip())
+            if m:
+                try:
+                    nums.append(int(m.group(1)))
+                except ValueError:
+                    pass
+        n = (max(nums) + 1) if nums else 1
         title = f"Respuesta {n}"
-    return title
+        while title in titles:
+            n += 1
+            title = f"Respuesta {n}"
+        return title
 
-if submitted:
     try:
         sheet_name = next_response_sheet_name(spreadsheet)
         ws = spreadsheet.add_worksheet(title=sheet_name, rows="500", cols="3")
