@@ -1,30 +1,32 @@
+import re
 import streamlit as st
 import gspread
 from google.oauth2.service_account import Credentials
 
 # =========================
-# CONFIGURACIÓN GOOGLE SHEETS
+# CONFIG: Google Sheets
 # =========================
-# Alcances para Sheets y Drive
-SCOPES = ["https://www.googleapis.com/auth/spreadsheets",
-          "https://www.googleapis.com/auth/drive"]
-
-# Conectar usando las credenciales guardadas en Streamlit (Secrets)
-creds = Credentials.from_service_account_info(
-    st.secrets["gcp_service_account"],
-    scopes=SCOPES
-)
-
+SCOPES = [
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/drive",
+]
+creds = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=SCOPES)
 client = gspread.authorize(creds)
-
-# ID del Spreadsheet que compartiste
 SPREADSHEET_ID = "1vO-WJqpKYzEXfkUPqFH3Vlgk5cveF9ThO4D0LRE-K_4"
-
-# Abrir el Spreadsheet
 spreadsheet = client.open_by_key(SPREADSHEET_ID)
 
 # =========================
-# TEXTOS BASE A REVISAR
+# UI
+# =========================
+st.set_page_config(page_title="Revisión de Contenidos Kar & Ma", layout="wide")
+st.title("📝 Revisión de Contenidos")
+st.write("Revisa cada bloque y escribe el **reemplazo** correspondiente. El texto original está a la izquierda; el campo de reemplazo está vacío por defecto.")
+
+# Toggle para abrir/cerrar todos los bloques
+expand_all = st.checkbox("Abrir todos los bloques", value=False)
+
+# =========================
+# TEXTOS BASE
 # =========================
 textos = {
     "Header - Menú": "Logo | Inicio | Nosotros | Submarcas | Segmentos | Clientes | Cotización",
@@ -89,32 +91,58 @@ Sectores atendidos:
 }
 
 # =========================
-# APP STREAMLIT
+# FORMULARIO
 # =========================
-st.title("📝 Revisión de Contenidos")
-st.write("Por favor, revisa cada bloque de texto actual y escribe el reemplazo correspondiente.")
+respuestas = {}
 
 with st.form("revision_form"):
-    respuestas = {}
-    for clave, texto in textos.items():
-        st.subheader(clave)
-        st.text_area("Texto actual:", value=texto, disabled=True, key=f"orig_{clave}")
-        nuevo_texto = st.text_area("Texto revisado:", value=texto, key=f"new_{clave}")
-        respuestas[clave] = nuevo_texto
+    for i, (clave, texto) in enumerate(textos.items()):
+        with st.expander(clave, expanded=expand_all):
+            col1, col2 = st.columns([1, 1])
+            with col1:
+                st.markdown("**Texto actual**")
+                st.info(texto)
+            with col2:
+                st.markdown("**Texto revisado**")
+                respuestas[clave] = st.text_area(
+                    label=f"Nuevo texto para '{clave}'",
+                    value="",                  # <-- VACÍO por defecto (no duplicado)
+                    placeholder="Escribe aquí el reemplazo…",
+                    height=140,
+                    key=f"resp_{i}"
+                )
+    submitted = st.form_submit_button("💾 Guardar en Google Sheets")
 
-    submit = st.form_submit_button("Guardar en Google Sheets")
+# =========================
+# GUARDADO: una respuesta = una pestaña
+# =========================
+def next_response_sheet_name(ss) -> str:
+    titles = [ws.title for ws in ss.worksheets()]
+    nums = []
+    for t in titles:
+        m = re.fullmatch(r"Respuesta (\d+)", t.strip())
+        if m:
+            try:
+                nums.append(int(m.group(1)))
+            except ValueError:
+                pass
+    n = (max(nums) + 1) if nums else 1
+    # Garantizar unicidad por si existe ya
+    title = f"Respuesta {n}"
+    while title in titles:
+        n += 1
+        title = f"Respuesta {n}"
+    return title
 
-if submit:
+if submitted:
     try:
-        # Crear nueva hoja con nombre único
-        nueva_hoja = spreadsheet.add_worksheet(title=f"Respuesta_{len(spreadsheet.worksheets())}", rows="100", cols="2")
-        # Insertar encabezados
-        nueva_hoja.append_row(["Sección", "Texto Revisado"])
-        # Insertar cada respuesta
-        for clave, valor in respuestas.items():
-            nueva_hoja.append_row([clave, valor])
-
-        st.success("✅ Respuestas guardadas en Google Sheets (nueva pestaña creada).")
-
+        sheet_name = next_response_sheet_name(spreadsheet)
+        ws = spreadsheet.add_worksheet(title=sheet_name, rows="500", cols="3")
+        # Encabezados
+        ws.append_row(["Sección", "Texto actual", "Texto revisado"])
+        # Filas (se respeta el orden del diccionario)
+        rows = [[k, textos[k], respuestas.get(k, "")] for k in textos.keys()]
+        ws.append_rows(rows, value_input_option="RAW")
+        st.success(f"✅ Respuestas guardadas en la pestaña '{sheet_name}'.")
     except Exception as e:
         st.error(f"❌ Error al guardar en Google Sheets: {e}")
