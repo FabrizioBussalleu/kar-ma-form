@@ -20,11 +20,9 @@ spreadsheet = client.open_by_key(SPREADSHEET_ID)
 # =========================
 st.set_page_config(page_title="Revisión de Contenidos Kar & Ma", layout="wide")
 st.title("📝 Revisión de Contenidos")
-st.write("Revisa cada bloque y escribe el **reemplazo** correspondiente. El texto original está a la izquierda; el campo de reemplazo está vacío por defecto.")
+st.write("Revisa cada bloque y escribe el **reemplazo** correspondiente. El texto original aparece como referencia, y el campo de edición está vacío por defecto. Todas las respuestas se guardan **al presionar el botón final**.")
 
-# Toggle para abrir/cerrar todos los bloques
-expand_all = st.checkbox("Abrir todos los bloques", value=False)
-
+expand_all = st.checkbox("📂 Abrir todos los bloques", value=False)
 # =========================
 # TEXTOS BASE
 # =========================
@@ -97,52 +95,43 @@ respuestas = {}
 
 with st.form("revision_form"):
     for i, (clave, texto) in enumerate(textos.items()):
-        with st.expander(clave, expanded=expand_all):
-            col1, col2 = st.columns([1, 1])
-            with col1:
-                st.markdown("**Texto actual**")
-                st.info(texto)
-            with col2:
-                st.markdown("**Texto revisado**")
-                respuestas[clave] = st.text_area(
-                    label=f"Nuevo texto para '{clave}'",
-                    value="",                  # <-- VACÍO por defecto (no duplicado)
-                    placeholder="Escribe aquí el reemplazo…",
-                    height=140,
-                    key=f"resp_{i}"
-                )
-    submitted = st.form_submit_button("💾 Guardar en Google Sheets")
+        with st.expander(f"✏️ {clave}", expanded=expand_all):
+            st.markdown(
+                f"""
+                <div style='padding:1rem; border-radius:0.8rem; background-color:#f9f9f9; box-shadow:0 1px 4px rgba(0,0,0,0.1);'>
+                    <b>Texto actual:</b>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+            st.info(texto)
+
+            respuestas[clave] = st.text_area(
+                label=f"Nueva versión para '{clave}'",
+                value="",  
+                placeholder="Escribe aquí el reemplazo…",
+                height=120,
+                key=f"resp_{i}"
+            )
+
+    submitted = st.form_submit_button("💾 Guardar todas las respuestas")
 
 # =========================
 # GUARDADO: una respuesta = una pestaña
 # =========================
 def next_response_sheet_name(ss) -> str:
     titles = [ws.title for ws in ss.worksheets()]
-    nums = []
-    for t in titles:
-        m = re.fullmatch(r"Respuesta (\d+)", t.strip())
-        if m:
-            try:
-                nums.append(int(m.group(1)))
-            except ValueError:
-                pass
+    nums = [int(m.group(1)) for t in titles if (m := re.fullmatch(r"Respuesta (\d+)", t.strip()))]
     n = (max(nums) + 1) if nums else 1
-    # Garantizar unicidad por si existe ya
-    title = f"Respuesta {n}"
-    while title in titles:
-        n += 1
-        title = f"Respuesta {n}"
-    return title
+    return f"Respuesta {n}"
 
 if submitted:
     try:
         sheet_name = next_response_sheet_name(spreadsheet)
         ws = spreadsheet.add_worksheet(title=sheet_name, rows="500", cols="3")
-        # Encabezados
         ws.append_row(["Sección", "Texto actual", "Texto revisado"])
-        # Filas (se respeta el orden del diccionario)
         rows = [[k, textos[k], respuestas.get(k, "")] for k in textos.keys()]
         ws.append_rows(rows, value_input_option="RAW")
-        st.success(f"✅ Respuestas guardadas en la pestaña '{sheet_name}'.")
+        st.success(f"✅ Respuestas guardadas en la pestaña **{sheet_name}**.")
     except Exception as e:
         st.error(f"❌ Error al guardar en Google Sheets: {e}")
