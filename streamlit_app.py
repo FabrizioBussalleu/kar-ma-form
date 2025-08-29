@@ -30,7 +30,7 @@ expand_all = st.checkbox("Abrir todos los bloques", value=False)
 # =========================
 textos = {
     "Header - Menú": "Logo | Inicio | Nosotros | Submarcas | Segmentos | Clientes | Cotización",
-    "Hero - Título": "Excelencia en sal retail e industrial awdas",
+    "Hero - Título": "Excelencia en sal retail e industrial",
     "Hero - Subtítulo": "Consorcio con más de 30 años de experiencia produciendo sal para empresas e industria local",
     "Historia - Título": "Historia del Grupo Kar & Ma",
     "Historia - Texto": """Durante más de tres décadas, Kar & Ma S.A.C. ha sido un pilar fundamental en la industria salinera peruana. 
